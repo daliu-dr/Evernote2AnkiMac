@@ -4,11 +4,7 @@ import os, sys, subprocess
 from datetime import datetime
 import time
 
-# from thrift.Thrift import *
-from evernote.edam.notestore.ttypes import NoteFilter, NotesMetadataResultSpec
-from evernote.edam.error.ttypes import EDAMSystemException, EDAMErrorCode
-from evernote.api.client import EvernoteClient
-# from evernote.edam.type.ttypes import SavedSearch
+import envoy
 
 import anki
 import aqt
@@ -276,7 +272,7 @@ class Anki:
     def import_file(self, filename):
         return aqt.mw.col.media.addFile(filename)
 
-    # TODO parse evernote content
+    # TODO: parse evernote content
     def parse_content(self, content, attachments, tags):
 
         soup = BeautifulSoup(content)
@@ -317,26 +313,13 @@ class Anki:
                     # replace embed with <img src...> for each image
                     match.replaceWith(imageTags)
 
-        # audio
-        # video
+        # TODO: audio
+        # TODO: video
 
 
-        #plugins
+        #plugins          
 
-        #highlights
-        # TODO: test
-        # <span style="background-color: rgb(255, 204, 102); ">some text...</span>
-        # -> <span class="highlight" style="background-color: rgb(255, 204, 102); ">some text...</span>
-        # 
-        # if mw.col.conf.get(SETTING_TAG_HIGHLIGHTS, False) in tags:
-        #     matches = soup.find(string=re.compile("<span style=\"background-color: rgb([0-9]+, [0-9]+, [0-9]+); \">.*</span>"))
-        #     if matches is not None:
-        #         for match in matches:
-        #             match['class'] = match.get('class', []) + ['highlight']
-        #             
-        #             
-
-        # TODO: qa
+        # TODO: qa-format as in Supermemo
         #for match in soup.find(string=re.compile("A:")):
         #    match['class'] = match.get('class', []) + ['Evernote2Anki-Highlight']
         
@@ -390,31 +373,8 @@ class EvernoteCard:
 class Evernote:
     def __init__(self):
 
-        if USE_APPLESCRIPT is False:
-
-            if not mw.col.conf.get(SETTING_TOKEN, False):
-                # First run of the Plugin we did not save the access key yet
-                client = EvernoteClient(
-                    consumer_key='scriptkiddi-2682',
-                    consumer_secret='965f1873e4df583c',
-                    sandbox=False
-                )
-                request_token = client.get_request_token('https://fap-studios.de/anknotes/index.html')
-                url = client.get_authorize_url(request_token)
-                showInfo("We will open a Evernote Tab in your browser so you can allow access to your account")
-                openLink(url)
-                oauth_verifier = getText(prompt="Please copy the code that showed up, after allowing access, in here")[0]
-                auth_token = client.get_access_token(
-                    request_token.get('oauth_token'),
-                    request_token.get('oauth_token_secret'),
-                    oauth_verifier)
-                mw.col.conf[SETTING_TOKEN] = auth_token
-            else:
-                auth_token = mw.col.conf.get(SETTING_TOKEN, False)
-
-            self.token = auth_token
-            self.client = EvernoteClient(token=auth_token, sandbox=False)
-            self.noteStore = self.client.get_note_store()
+        # TODO: display error message if evernote not installed?
+        pass
 
 
     # TODO: desc
@@ -449,25 +409,10 @@ class Evernote:
         return guids
 
     def get_note_information(self, note_guid):
-        if USE_APPLESCRIPT is not False:
-            whole_note = next((l for l in USE_APPLESCRIPT['notes'] if l['guid'] == note_guid), None)
-            if mw.col.conf.get(SETTING_KEEP_TAGS, False):
-                tags = whole_note['tags']
-            #raise NameError(whole_note)
-        else:
-            tags = []
-            try:
-                # TODO attachments evernote api
-                whole_note = self.noteStore.getNote(self.token, note_guid, True, True, False, False)
-                if mw.col.conf.get(SETTING_KEEP_TAGS, False):
-                    tags = self.noteStore.getNoteTagNames(self.token, note_guid)
-            except EDAMSystemException, e:
-                if e.errorCode == EDAMErrorCode.RATE_LIMIT_REACHED:
-                    m, s = divmod(e.rateLimitDuration, 60)
-                    showInfo("Rate limit has been reached. We will save the notes downloaded thus far.\r\n"
-                             "Please retry your request in {} min".format("%d:%02d" % (m, s)))
-                    return None
-                raise
+        whole_note = next((l for l in USE_APPLESCRIPT['notes'] if l['guid'] == note_guid), None)
+        if mw.col.conf.get(SETTING_KEEP_TAGS, False):
+            tags = whole_note['tags']
+        #raise NameError(whole_note)
         
         return whole_note['title'].encode('utf-8'), whole_note['content'].encode('utf-8'), tags, whole_note['attachments'], whole_note['modified']
 
@@ -489,60 +434,56 @@ class Controller:
         anki_guids = self.anki.get_guids_from_anki_id(anki_ids)
 
         # get all Evernote notes
-        if USE_APPLESCRIPT is not False:
-            USE_APPLESCRIPT['notes'] = applescript.AppleScript('''
-                on run {arg1}
-                tell application "Evernote"
-                    set myNotes to find notes "tag:" & arg1
-                    set noteList to {}
-                    
-                    set currentTime to do shell script "date '+%Y%m%d%H%M%S'"
-                    tell application "Finder"
-                        try
-                            make new folder at (path to temporary items as string) with properties {name:currentTime}
-                        end try
-                    end tell
-                    
-                    repeat with counter_variable_name from 1 to count of myNotes
-                        set current_note to item counter_variable_name of myNotes
-                        
-                        set currentTags to tags of current_note
-                        set currentGUID to guid of current_note as string
-                        set tagList to {}
-                        
-                        repeat with tag_counter from 1 to count of currentTags
-                            set end of tagList to name of item tag_counter of currentTags
-                        end repeat
-                        
-                        set currentAttachments to attachments of current_note
-                        set attachmentList to {}
-                        repeat with counter from 1 to count of currentAttachments
-                            set current_attachment to item counter of currentAttachments
-                            
-                            tell application "Finder"
-                                try
-                                    make new folder at (path to temporary items as string) & currentTime with properties {name:currentGUID}
-                                end try
-                            end tell
-                            
-                            set current_filename to ((path to temporary items as string) & currentTime & ":" & currentGUID & ":" & (hash of current_attachment))
-                            
-                            write current_attachment to current_filename
-                            
-                            set end of attachmentList to {|hash|:hash of current_attachment, |filename|:POSIX path of current_filename}
-                        end repeat
-                        
-                        set end of noteList to {|title|:title of current_note, |content|:HTML content of current_note, |modified|:modification date of current_note, |guid|:currentGUID, |tags|:tagList, |attachments|:attachmentList}
-                    end repeat
-                    noteList
+        USE_APPLESCRIPT['notes'] = applescript.AppleScript('''
+            on run {arg1}
+            tell application "Evernote"
+                set myNotes to find notes "tag:" & arg1
+                set noteList to {}
+                
+                set currentTime to do shell script "date '+%Y%m%d%H%M%S'"
+                tell application "Finder"
+                    try
+                        make new folder at (path to temporary items as string) with properties {name:currentTime}
+                    end try
                 end tell
-                end run
+                
+                repeat with counter_variable_name from 1 to count of myNotes
+                    set current_note to item counter_variable_name of myNotes
+                    
+                    set currentTags to tags of current_note
+                    set currentGUID to guid of current_note as string
+                    set tagList to {}
+                    
+                    repeat with tag_counter from 1 to count of currentTags
+                        set end of tagList to name of item tag_counter of currentTags
+                    end repeat
+                    
+                    set currentAttachments to attachments of current_note
+                    set attachmentList to {}
+                    repeat with counter from 1 to count of currentAttachments
+                        set current_attachment to item counter of currentAttachments
+                        
+                        tell application "Finder"
+                            try
+                                make new folder at (path to temporary items as string) & currentTime with properties {name:currentGUID}
+                            end try
+                        end tell
+                        
+                        set current_filename to ((path to temporary items as string) & currentTime & ":" & currentGUID & ":" & (hash of current_attachment))
+                        
+                        write current_attachment to current_filename
+                        
+                        set end of attachmentList to {|hash|:hash of current_attachment, |filename|:POSIX path of current_filename}
+                    end repeat
+                    
+                    set end of noteList to {|title|:title of current_note, |content|:HTML content of current_note, |modified|:modification date of current_note, |guid|:currentGUID, |tags|:tagList, |attachments|:attachmentList}
+                end repeat
+                noteList
+            end tell
+            end run
 
-            ''').run(mw.col.conf.get(SETTING_TAGS_TO_IMPORT, ""))
-            evernote_guids = [d['guid'] for d in USE_APPLESCRIPT['notes']]
-
-        else:
-            evernote_guids = self.get_evernote_guids_from_tag(self.evernoteTags)
+        ''').run(mw.col.conf.get(SETTING_TAGS_TO_IMPORT, ""))
+        evernote_guids = [d['guid'] for d in USE_APPLESCRIPT['notes']]
 
         cards_to_add = set(evernote_guids) - set(anki_guids)
         cards_to_update = set(evernote_guids) - set(cards_to_add)
@@ -587,15 +528,6 @@ class Controller:
         cards = self.evernote.create_evernote_cards(guid_set)
         number = self.anki.add_evernote_cards(cards, deck, tag)
         return number
-
-    # TODO: desc
-    def get_evernote_guids_from_tag(self, tags):
-        note_guids = []
-        for tag in tags:
-            tag_guid = self.evernote.find_tag_guid(tag)
-            if tag_guid is not None:
-                note_guids += self.evernote.find_notes_filter_by_tag_guids([tag_guid])
-        return note_guids
 
 
 def show_tooltip(text, time_out=3000):
@@ -671,7 +603,7 @@ def setup_evernote(self):
     widget.setLayout(layout)
 
     # New Tab
-    self.form.tabWidget.addTab(widget, "Evernote Importer")
+    self.form.tabWidget.addTab(widget, "Evernote2AnkiMac")
 
 def update_evernote_default_deck():
     mw.col.conf[SETTING_DEFAULT_DECK] = evernote_default_deck.text()
@@ -691,12 +623,8 @@ def update_evernote_update_existing_notes(index):
 Preferences.setupOptions = wrap(Preferences.setupOptions, setup_evernote)
 
 
-
-
 # ImageMagick is a requirement, convert needs to be in the path!
 # we use envoy to better handle the output (which for whatever reason is actually output to std_err)
-import envoy
-
 def pdf2image(pdfpath, resolution=72):
     #sys.stderr.write(pdfpath+"\n")
     r = envoy.run(str('convert -verbose -density 200 pdf:' +pdfpath+ ' ' +pdfpath+ '.png'))
