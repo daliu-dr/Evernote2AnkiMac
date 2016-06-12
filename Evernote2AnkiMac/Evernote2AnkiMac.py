@@ -272,7 +272,7 @@ class Anki:
     def import_file(self, filename):
         return aqt.mw.col.media.addFile(filename)
 
-    # TODO parse evernote content
+    # TODO: parse evernote content
     def parse_content(self, content, attachments, tags):
 
         soup = BeautifulSoup(content)
@@ -313,26 +313,13 @@ class Anki:
                     # replace embed with <img src...> for each image
                     match.replaceWith(imageTags)
 
-        # audio
-        # video
+        # TODO: audio
+        # TODO: video
 
 
-        #plugins
+        #plugins          
 
-        #highlights
-        # TODO: test
-        # <span style="background-color: rgb(255, 204, 102); ">some text...</span>
-        # -> <span class="highlight" style="background-color: rgb(255, 204, 102); ">some text...</span>
-        # 
-        # if mw.col.conf.get(SETTING_TAG_HIGHLIGHTS, False) in tags:
-        #     matches = soup.find(string=re.compile("<span style=\"background-color: rgb([0-9]+, [0-9]+, [0-9]+); \">.*</span>"))
-        #     if matches is not None:
-        #         for match in matches:
-        #             match['class'] = match.get('class', []) + ['highlight']
-        #             
-        #             
-
-        # TODO: qa
+        # TODO: qa-format as in Supermemo
         #for match in soup.find(string=re.compile("A:")):
         #    match['class'] = match.get('class', []) + ['Evernote2Anki-Highlight']
         
@@ -447,60 +434,56 @@ class Controller:
         anki_guids = self.anki.get_guids_from_anki_id(anki_ids)
 
         # get all Evernote notes
-        if USE_APPLESCRIPT is not False:
-            USE_APPLESCRIPT['notes'] = applescript.AppleScript('''
-                on run {arg1}
-                tell application "Evernote"
-                    set myNotes to find notes "tag:" & arg1
-                    set noteList to {}
-                    
-                    set currentTime to do shell script "date '+%Y%m%d%H%M%S'"
-                    tell application "Finder"
-                        try
-                            make new folder at (path to temporary items as string) with properties {name:currentTime}
-                        end try
-                    end tell
-                    
-                    repeat with counter_variable_name from 1 to count of myNotes
-                        set current_note to item counter_variable_name of myNotes
-                        
-                        set currentTags to tags of current_note
-                        set currentGUID to guid of current_note as string
-                        set tagList to {}
-                        
-                        repeat with tag_counter from 1 to count of currentTags
-                            set end of tagList to name of item tag_counter of currentTags
-                        end repeat
-                        
-                        set currentAttachments to attachments of current_note
-                        set attachmentList to {}
-                        repeat with counter from 1 to count of currentAttachments
-                            set current_attachment to item counter of currentAttachments
-                            
-                            tell application "Finder"
-                                try
-                                    make new folder at (path to temporary items as string) & currentTime with properties {name:currentGUID}
-                                end try
-                            end tell
-                            
-                            set current_filename to ((path to temporary items as string) & currentTime & ":" & currentGUID & ":" & (hash of current_attachment))
-                            
-                            write current_attachment to current_filename
-                            
-                            set end of attachmentList to {|hash|:hash of current_attachment, |filename|:POSIX path of current_filename}
-                        end repeat
-                        
-                        set end of noteList to {|title|:title of current_note, |content|:HTML content of current_note, |modified|:modification date of current_note, |guid|:currentGUID, |tags|:tagList, |attachments|:attachmentList}
-                    end repeat
-                    noteList
+        USE_APPLESCRIPT['notes'] = applescript.AppleScript('''
+            on run {arg1}
+            tell application "Evernote"
+                set myNotes to find notes "tag:" & arg1
+                set noteList to {}
+                
+                set currentTime to do shell script "date '+%Y%m%d%H%M%S'"
+                tell application "Finder"
+                    try
+                        make new folder at (path to temporary items as string) with properties {name:currentTime}
+                    end try
                 end tell
-                end run
+                
+                repeat with counter_variable_name from 1 to count of myNotes
+                    set current_note to item counter_variable_name of myNotes
+                    
+                    set currentTags to tags of current_note
+                    set currentGUID to guid of current_note as string
+                    set tagList to {}
+                    
+                    repeat with tag_counter from 1 to count of currentTags
+                        set end of tagList to name of item tag_counter of currentTags
+                    end repeat
+                    
+                    set currentAttachments to attachments of current_note
+                    set attachmentList to {}
+                    repeat with counter from 1 to count of currentAttachments
+                        set current_attachment to item counter of currentAttachments
+                        
+                        tell application "Finder"
+                            try
+                                make new folder at (path to temporary items as string) & currentTime with properties {name:currentGUID}
+                            end try
+                        end tell
+                        
+                        set current_filename to ((path to temporary items as string) & currentTime & ":" & currentGUID & ":" & (hash of current_attachment))
+                        
+                        write current_attachment to current_filename
+                        
+                        set end of attachmentList to {|hash|:hash of current_attachment, |filename|:POSIX path of current_filename}
+                    end repeat
+                    
+                    set end of noteList to {|title|:title of current_note, |content|:HTML content of current_note, |modified|:modification date of current_note, |guid|:currentGUID, |tags|:tagList, |attachments|:attachmentList}
+                end repeat
+                noteList
+            end tell
+            end run
 
-            ''').run(mw.col.conf.get(SETTING_TAGS_TO_IMPORT, ""))
-            evernote_guids = [d['guid'] for d in USE_APPLESCRIPT['notes']]
-
-        else:
-            pass
+        ''').run(mw.col.conf.get(SETTING_TAGS_TO_IMPORT, ""))
+        evernote_guids = [d['guid'] for d in USE_APPLESCRIPT['notes']]
 
         cards_to_add = set(evernote_guids) - set(anki_guids)
         cards_to_update = set(evernote_guids) - set(cards_to_add)
@@ -620,7 +603,7 @@ def setup_evernote(self):
     widget.setLayout(layout)
 
     # New Tab
-    self.form.tabWidget.addTab(widget, "Evernote Importer")
+    self.form.tabWidget.addTab(widget, "Evernote2AnkiMac")
 
 def update_evernote_default_deck():
     mw.col.conf[SETTING_DEFAULT_DECK] = evernote_default_deck.text()
@@ -638,8 +621,6 @@ def update_evernote_update_existing_notes(index):
     mw.col.conf[SETTING_UPDATE_EXISTING_NOTES] = index
 
 Preferences.setupOptions = wrap(Preferences.setupOptions, setup_evernote)
-
-
 
 
 # ImageMagick is a requirement, convert needs to be in the path!
