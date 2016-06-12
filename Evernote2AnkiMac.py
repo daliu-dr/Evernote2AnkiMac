@@ -1,0 +1,1 @@
+from Evernote2AnkiMac import Evernote2AnkiMac

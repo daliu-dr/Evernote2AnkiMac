@@ -4,11 +4,7 @@ import os, sys, subprocess
 from datetime import datetime
 import time
 
-# from thrift.Thrift import *
-from evernote.edam.notestore.ttypes import NoteFilter, NotesMetadataResultSpec
-from evernote.edam.error.ttypes import EDAMSystemException, EDAMErrorCode
-from evernote.api.client import EvernoteClient
-# from evernote.edam.type.ttypes import SavedSearch
+import envoy
 
 import anki
 import aqt
@@ -390,31 +386,8 @@ class EvernoteCard:
 class Evernote:
     def __init__(self):
 
-        if USE_APPLESCRIPT is False:
-
-            if not mw.col.conf.get(SETTING_TOKEN, False):
-                # First run of the Plugin we did not save the access key yet
-                client = EvernoteClient(
-                    consumer_key='scriptkiddi-2682',
-                    consumer_secret='965f1873e4df583c',
-                    sandbox=False
-                )
-                request_token = client.get_request_token('https://fap-studios.de/anknotes/index.html')
-                url = client.get_authorize_url(request_token)
-                showInfo("We will open a Evernote Tab in your browser so you can allow access to your account")
-                openLink(url)
-                oauth_verifier = getText(prompt="Please copy the code that showed up, after allowing access, in here")[0]
-                auth_token = client.get_access_token(
-                    request_token.get('oauth_token'),
-                    request_token.get('oauth_token_secret'),
-                    oauth_verifier)
-                mw.col.conf[SETTING_TOKEN] = auth_token
-            else:
-                auth_token = mw.col.conf.get(SETTING_TOKEN, False)
-
-            self.token = auth_token
-            self.client = EvernoteClient(token=auth_token, sandbox=False)
-            self.noteStore = self.client.get_note_store()
+        # TODO: display error message if evernote not installed?
+        pass
 
 
     # TODO: desc
@@ -449,25 +422,10 @@ class Evernote:
         return guids
 
     def get_note_information(self, note_guid):
-        if USE_APPLESCRIPT is not False:
-            whole_note = next((l for l in USE_APPLESCRIPT['notes'] if l['guid'] == note_guid), None)
-            if mw.col.conf.get(SETTING_KEEP_TAGS, False):
-                tags = whole_note['tags']
-            #raise NameError(whole_note)
-        else:
-            tags = []
-            try:
-                # TODO attachments evernote api
-                whole_note = self.noteStore.getNote(self.token, note_guid, True, True, False, False)
-                if mw.col.conf.get(SETTING_KEEP_TAGS, False):
-                    tags = self.noteStore.getNoteTagNames(self.token, note_guid)
-            except EDAMSystemException, e:
-                if e.errorCode == EDAMErrorCode.RATE_LIMIT_REACHED:
-                    m, s = divmod(e.rateLimitDuration, 60)
-                    showInfo("Rate limit has been reached. We will save the notes downloaded thus far.\r\n"
-                             "Please retry your request in {} min".format("%d:%02d" % (m, s)))
-                    return None
-                raise
+        whole_note = next((l for l in USE_APPLESCRIPT['notes'] if l['guid'] == note_guid), None)
+        if mw.col.conf.get(SETTING_KEEP_TAGS, False):
+            tags = whole_note['tags']
+        #raise NameError(whole_note)
         
         return whole_note['title'].encode('utf-8'), whole_note['content'].encode('utf-8'), tags, whole_note['attachments'], whole_note['modified']
 
@@ -542,7 +500,7 @@ class Controller:
             evernote_guids = [d['guid'] for d in USE_APPLESCRIPT['notes']]
 
         else:
-            evernote_guids = self.get_evernote_guids_from_tag(self.evernoteTags)
+            pass
 
         cards_to_add = set(evernote_guids) - set(anki_guids)
         cards_to_update = set(evernote_guids) - set(cards_to_add)
@@ -587,15 +545,6 @@ class Controller:
         cards = self.evernote.create_evernote_cards(guid_set)
         number = self.anki.add_evernote_cards(cards, deck, tag)
         return number
-
-    # TODO: desc
-    def get_evernote_guids_from_tag(self, tags):
-        note_guids = []
-        for tag in tags:
-            tag_guid = self.evernote.find_tag_guid(tag)
-            if tag_guid is not None:
-                note_guids += self.evernote.find_notes_filter_by_tag_guids([tag_guid])
-        return note_guids
 
 
 def show_tooltip(text, time_out=3000):
@@ -695,8 +644,6 @@ Preferences.setupOptions = wrap(Preferences.setupOptions, setup_evernote)
 
 # ImageMagick is a requirement, convert needs to be in the path!
 # we use envoy to better handle the output (which for whatever reason is actually output to std_err)
-import envoy
-
 def pdf2image(pdfpath, resolution=72):
     #sys.stderr.write(pdfpath+"\n")
     r = envoy.run(str('convert -verbose -density 200 pdf:' +pdfpath+ ' ' +pdfpath+ '.png'))
