@@ -441,15 +441,10 @@ class Controller:
                 set noteList to {}
                 
                 set currentTime to do shell script "date '+%Y%m%d%H%M%S'"
-                tell application "Finder"
-                    try
-                        make new folder at (path to temporary items as string) with properties {name:currentTime}
-                    end try
-                end tell
+                set temporarypath to path to temporary items as string
                 
                 repeat with counter_variable_name from 1 to count of myNotes
                     set current_note to item counter_variable_name of myNotes
-                    
                     set currentTags to tags of current_note
                     set currentGUID to guid of current_note as string
                     set tagList to {}
@@ -460,27 +455,31 @@ class Controller:
                     
                     set currentAttachments to attachments of current_note
                     set attachmentList to {}
+                    
                     repeat with counter from 1 to count of currentAttachments
                         set current_attachment to item counter of currentAttachments
                         
                         tell application "Finder"
                             try
-                                make new folder at (path to temporary items as string) & currentTime with properties {name:currentGUID}
+                                make new folder at temporarypath with properties {name:(currentTime as string) & (currentGUID as string)}
                             end try
+                            set current_filepath to temporarypath & (currentTime as string) & (currentGUID as string)
                         end tell
                         
-                        set current_filename to ((path to temporary items as string) & currentTime & ":" & currentGUID & ":" & (hash of current_attachment))
-                        
-                        write current_attachment to current_filename
+                        set current_filename to (current_filepath & ":" & (hash of current_attachment))
+                        try
+                            write current_attachment to current_filename
+                        end try
                         
                         set end of attachmentList to {|hash|:hash of current_attachment, |filename|:POSIX path of current_filename}
                     end repeat
                     
-                    set end of noteList to {|title|:title of current_note, |content|:HTML content of current_note, |modified|:modification date of current_note, |guid|:currentGUID, |tags|:tagList, |attachments|:attachmentList}
+                    set end of noteList to {|title|:title of current_note, |content|:HTML content of current_note, |modified|:modification date of current_note, |guid|:currentGUID, |link|:note link of current_note, |tags|:tagList, |attachments|:attachmentList}
+                    
                 end repeat
                 noteList
             end tell
-            end run
+        end run
 
         ''').run(mw.col.conf.get(SETTING_TAGS_TO_IMPORT, ""))
         evernote_guids = [d['guid'] for d in USE_APPLESCRIPT['notes']]
