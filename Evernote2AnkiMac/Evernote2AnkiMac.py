@@ -474,7 +474,7 @@ class Controller:
                         set end of attachmentList to {|hash|:hash of current_attachment, |filename|:POSIX path of current_filename}
                     end repeat
                     
-                    set end of noteList to {|title|:title of current_note, content:HTML content of current_note, |modified|:modification date of current_note, |guid|:currentGUID, link:note link of current_note, |tags|:tagList, |attachments|:attachmentList}
+                    set end of noteList to {|title|:title of current_note, |content|:HTML content of current_note, |modified|:modification date of current_note, |guid|:currentGUID, |link|:note link of current_note, |tags|:tagList, |attachments|:attachmentList}
                     
                 end repeat
                 noteList
