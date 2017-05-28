@@ -1,1 +1,1 @@
-from Evernote2AnkiMac import Evernote2AnkiMac
+from Evernote2AnkiMacAddon import Evernote2AnkiMac

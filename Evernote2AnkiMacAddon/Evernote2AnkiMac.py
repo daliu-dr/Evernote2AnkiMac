@@ -539,7 +539,8 @@ def main():
 
 
 action = aqt.qt.QAction("Import from Evernote", aqt.mw)
-aqt.mw.connect(action, aqt.qt.SIGNAL("triggered()"), main)
+# aqt.mw.connect(action, aqt.qt.SIGNAL("triggered()"), main)
+action.triggered.connect(main)
 aqt.mw.form.menuTools.addAction(action)
 
 
