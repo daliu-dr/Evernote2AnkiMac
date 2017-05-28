@@ -1,11 +1,11 @@
 # Evernote2Anki Importer for Mac (beta)
 
-**Forks and suggestions are very welcome.**
+**Forks and suggestions are welcome**
 
 Thanks to https://github.com/brumar/anknotes for most of the code.
 
 ## Description
-An Anki addon for OS X for importing Evernote (https://www.evernote.com) notes to anki. Very rudimentary for the moment. I wait for suggestions according to the needs of evernote/anki users.
+An Anki addon for OS X for importing [Evernote](https://www.evernote.com) notes to anki. Very rudimentary for the moment. I wait for suggestions according to the needs of evernote/anki users.
 
 ## How to use it
 - download everything, move it to your Anki/addons directory
