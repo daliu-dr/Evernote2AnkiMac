@@ -9,8 +9,8 @@ An Anki addon for OS X for importing [Evernote](https://www.evernote.com) notes 
 
 ## How to use it
 - download everything, move it to your Anki/addons directory
-- install ImageMagick and the Ghostscript library, eg. using [homebrew](https://brew.sh/)
-  - ```brew install imagemagick ghostscript```
+- install GraphicsMagick and the Ghostscript library, eg. using [homebrew](https://brew.sh/)
+  - ```brew install graphicsmagick ghostscript```
 - install the Evernote app from the App store or directly from their website
 - start Anki and fill in the information in the preferences tab
 - use _Tools->Import from Evernote_ to import notes
@@ -23,4 +23,4 @@ An Anki addon for OS X for importing [Evernote](https://www.evernote.com) notes 
 - Transforms highlights into a cloze deletion format
 
 ## Compatibility
-- Tested with ImageMagick 7.0.5-8, Ghostscript 9.21, macOS Sierra 10.12.5
+- Tested with GraphicsMagick 1.3.25, Ghostscript 9.21, macOS Sierra 10.12.5
