@@ -444,10 +444,10 @@ class Controller:
 
                 tell application "Finder"
                     try
-                        make new folder at (path to desktop as string) with properties {name:"Evernote2AnkiMac_"&currentTime}
+                        make new folder at (path to temporary items as string) with properties {name:"Evernote2AnkiMac_"&currentTime}
                     end try
                 end tell  
-                set temporarypath to (path to desktop as string) & "Evernote2AnkiMac_" & currentTime
+                set temporarypath to (path to temporary items as string) & "Evernote2AnkiMac_" & currentTime
 
 
                 repeat with counter_variable_name from 1 to count of myNotes
@@ -634,16 +634,17 @@ Preferences.setupOptions = wrap(Preferences.setupOptions, setup_evernote)
 # we use envoy to better handle the output (which for whatever reason is actually output to std_err)
 def pdf2image(pdfpath, resolution=72):
     # sys.stderr.write("\n"+str('convert -verbose -density 200 pdf:' +pdfpath+ ' ' +pdfpath+ '.png')+"\n"+"\n"+"\n"+pdfpath+"\n")
-    r = envoy.run(str('convert -verbose -density 200 pdf:' +pdfpath+ ' ' +pdfpath+ '.png'))
+    r = envoy.run(str('gm convert -verbose -density 200 pdf:' +pdfpath+ ' +adjoin ' +pdfpath+ '-%0d.png'))
     # sys.stderr.write("envoy: "+r.std_err+"\n"+r.std_out+"\n"+"convert pdf:"+pdfpath+" -verbose -density 200 "+ pdfpath+".png"+"\nEND envoy")
     # for whatever reason, convert outputs it as error -> std_err
-    num = re.findall(' PNG ', r.std_err)
+    num = re.findall(' PDF ', r.std_err)
     # sys.stderr.write(r.std_err)
     if len(num) is 1:
         return [(pdfpath+".png").decode('UTF-8')]
     else:
         images = []
-        for i,v in enumerate(num):
+        # there are num/2 files (every PDF page is outputted twice)
+        for i in range(0, len(num)/2):
             images.append((pdfpath+"-"+str(i)+".png").decode('UTF-8'))
         return images
 
