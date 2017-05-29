@@ -441,8 +441,15 @@ class Controller:
                 set noteList to {}
                 
                 set currentTime to do shell script "date '+%Y%m%d%H%M%S'"
-                set temporarypath to path to temporary items as string
-                
+
+                tell application "Finder"
+                    try
+                        make new folder at (path to desktop as string) with properties {name:"Evernote2AnkiMac_"&currentTime}
+                    end try
+                end tell  
+                set temporarypath to (path to desktop as string) & "Evernote2AnkiMac_" & currentTime
+
+
                 repeat with counter_variable_name from 1 to count of myNotes
                     set current_note to item counter_variable_name of myNotes
                     set currentTags to tags of current_note
@@ -454,19 +461,19 @@ class Controller:
                     end repeat
                     
                     set currentAttachments to attachments of current_note
-                    set attachmentList to {}
+                    set attachmentList to {}                  
                     
                     repeat with counter from 1 to count of currentAttachments
                         set current_attachment to item counter of currentAttachments
                         
                         tell application "Finder"
                             try
-                                make new folder at temporarypath with properties {name:(currentTime as string) & (currentGUID as string)}
+                                make new folder at temporarypath with properties {name:currentGUID}
                             end try
-                            set current_filepath to temporarypath & (currentTime as string) & (currentGUID as string)
                         end tell
                         
-                        set current_filename to (current_filepath & ":" & (hash of current_attachment))
+                        set current_filename to (temporarypath & ":" & currentGUID & ":" & (hash of current_attachment))
+
                         try
                             write current_attachment to current_filename
                         end try
@@ -555,7 +562,7 @@ def setup_evernote(self):
     layout = QVBoxLayout()
 
     # Default Deck
-    evernote_default_deck_label = QLabel("Default Deck:")
+    evernote_default_deck_label = QLabel("Default Deck for imported Cards:")
     evernote_default_deck = QLineEdit()
     evernote_default_deck.setText(mw.col.conf.get(SETTING_DEFAULT_DECK, ""))
     layout.insertWidget(int(layout.count()) + 1, evernote_default_deck_label)
@@ -563,7 +570,7 @@ def setup_evernote(self):
     evernote_default_deck.connect(evernote_default_deck, SIGNAL("editingFinished()"), update_evernote_default_deck)
 
     # Default Tag
-    evernote_default_tag_label = QLabel("Default Tag:")
+    evernote_default_tag_label = QLabel("Default Tag for imported Cards:")
     evernote_default_tag = QLineEdit()
     evernote_default_tag.setText(mw.col.conf.get(SETTING_DEFAULT_TAG, ""))
     layout.insertWidget(int(layout.count()) + 1, evernote_default_tag_label)
@@ -571,7 +578,7 @@ def setup_evernote(self):
     evernote_default_tag.connect(evernote_default_tag, SIGNAL("editingFinished()"), update_evernote_default_tag)
 
     # Tags to Import
-    evernote_tags_to_import_label = QLabel("Tags to Import:")
+    evernote_tags_to_import_label = QLabel("Evernote Tags to Import:")
     evernote_tags_to_import = QLineEdit()
     evernote_tags_to_import.setText(mw.col.conf.get(SETTING_TAGS_TO_IMPORT, ""))
     layout.insertWidget(int(layout.count()) + 1, evernote_tags_to_import_label)
@@ -626,15 +633,19 @@ Preferences.setupOptions = wrap(Preferences.setupOptions, setup_evernote)
 # ImageMagick is a requirement, convert needs to be in the path!
 # we use envoy to better handle the output (which for whatever reason is actually output to std_err)
 def pdf2image(pdfpath, resolution=72):
-    #sys.stderr.write(pdfpath+"\n")
+    # sys.stderr.write("\n"+str('convert -verbose -density 200 pdf:' +pdfpath+ ' ' +pdfpath+ '.png')+"\n"+"\n"+"\n"+pdfpath+"\n")
     r = envoy.run(str('convert -verbose -density 200 pdf:' +pdfpath+ ' ' +pdfpath+ '.png'))
-    #sys.stderr.write("envoy: "+r.std_err+"\n"+r.std_out+"\n"+"convert pdf:"+pdfpath+" -verbose -density 200 "+ pdfpath+".png"+"\nEND envoy")
+    # sys.stderr.write("envoy: "+r.std_err+"\n"+r.std_out+"\n"+"convert pdf:"+pdfpath+" -verbose -density 200 "+ pdfpath+".png"+"\nEND envoy")
     # for whatever reason, convert outputs it as error -> std_err
-    num = re.findall(pdfpath+'-[0-9]+.png', r.std_err)
-    if len(num) is 0:
+    num = re.findall(' PNG ', r.std_err)
+    # sys.stderr.write(r.std_err)
+    if len(num) is 1:
         return [(pdfpath+".png").decode('UTF-8')]
     else:
-        return [i.decode('UTF-8') for i in num]
+        images = []
+        for i,v in enumerate(num):
+            images.append((pdfpath+"-"+str(i)+".png").decode('UTF-8'))
+        return images
 
 
 
