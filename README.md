@@ -23,4 +23,4 @@ An Anki addon for OS X for importing [Evernote](https://www.evernote.com) notes 
 - Transforms highlights into a cloze deletion format
 
 ## Compatibility
-- Tested with ImageMagick 7.0.5-8, Ghostscript 9.21, macOS Sierra 10.12.5
+- Tested with GraphicsMagick 1.3.25, Ghostscript 9.21, macOS Sierra 10.12.5
